@@ -1,0 +1,87 @@
+'use client';
+import { useState } from 'react';
+import Link from 'next/link';
+import { crearClienteNavegador } from '@/lib/supabase/client';
+import { DISTRITOS, POSICIONES } from '@/lib/datos';
+
+export default function Registro() {
+  const [error, setError] = useState('');
+  const [listo, setListo] = useState('');
+  const [cargando, setCargando] = useState(false);
+
+  async function enviar(e) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const nombre = f.get('nombre').trim().replace(/\s+/g, ' ');
+    const email = f.get('email').trim().toLowerCase();
+    const telefono = f.get('telefono').trim();
+    const clave = f.get('clave');
+    setError('');
+
+    if (nombre.split(' ').length < 2) return setError('Escribe tu nombre y apellido.');
+    if (!/^9\d{8}$/.test(telefono)) return setError('El teléfono debe tener 9 dígitos y empezar con 9.');
+    if (clave.length < 8) return setError('La contraseña debe tener al menos 8 caracteres.');
+
+    setCargando(true);
+    const supabase = crearClienteNavegador();
+    const { data: libre } = await supabase.rpc('telefono_disponible', { p_telefono: telefono });
+    if (libre === false) {
+      setCargando(false);
+      return setError('Este teléfono ya está registrado en otra cuenta.');
+    }
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: clave,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: { nombre_completo: nombre, telefono, posicion: f.get('posicion'), distrito: f.get('distrito') },
+      },
+    });
+    setCargando(false);
+    if (error) {
+      if (/already registered/i.test(error.message)) return setError('Este correo ya tiene una cuenta. Ingresa con él o usa otro correo.');
+      if (/database error/i.test(error.message)) return setError('No se pudo crear la cuenta. Revisa que el teléfono no esté registrado.');
+      return setError(error.message);
+    }
+    // Supabase no avisa el correo repetido por seguridad: lo detectamos así
+    if (data.user && data.user.identities?.length === 0) {
+      return setError('Este correo ya tiene una cuenta. Ingresa con él o usa otro correo.');
+    }
+    setListo(email);
+  }
+
+  if (listo) {
+    return (
+      <div className="card">
+        <h1 style={{ fontSize: 30 }}>Revisa tu correo</h1>
+        <p>Enviamos un enlace a <b>{listo}</b>. Ábrelo para activar tu cuenta y luego ingresa. Si no lo ves, revisa la carpeta de spam.</p>
+        <Link className="btn" href="/login">Ir a ingresar</Link>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="pagehead">
+        <div>
+          <h1>Crear cuenta</h1>
+          <p>Un correo y un teléfono por persona. Podrás subir tu foto de perfil después de ingresar.</p>
+        </div>
+      </div>
+      <form className="card grid" onSubmit={enviar}>
+        <label className="full">Nombre completo<input id="nombre" name="nombre" type="text" required maxLength={80} autoComplete="name" /></label>
+        <label>Correo electrónico<input id="email" name="email" type="email" required autoComplete="email" /></label>
+        <label>Teléfono (9 dígitos)<input id="telefono" name="telefono" type="tel" required inputMode="numeric" maxLength={9} placeholder="9XXXXXXXX" /></label>
+        <label>Contraseña (mínimo 8)<input id="clave" name="clave" type="password" required minLength={8} autoComplete="new-password" /></label>
+        <label>Posición
+          <select id="posicion" name="posicion">{POSICIONES.map((p) => <option key={p.valor} value={p.valor}>{p.nombre}</option>)}</select>
+        </label>
+        <label className="full">Distrito donde juegas
+          <select id="distrito" name="distrito">{DISTRITOS.map((d) => <option key={d}>{d}</option>)}</select>
+        </label>
+        {error && <p className="full err" role="alert">{error}</p>}
+        <div className="full"><button className="btn" type="submit" disabled={cargando}>{cargando ? 'Creando cuenta…' : 'Registrarme'}</button></div>
+      </form>
+    </>
+  );
+}
