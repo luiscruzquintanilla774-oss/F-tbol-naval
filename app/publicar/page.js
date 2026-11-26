@@ -4,6 +4,14 @@ import { useRouter } from 'next/navigation';
 import { crearClienteNavegador } from '@/lib/supabase/client';
 import { DISTRITOS, POSICIONES } from '@/lib/datos';
 
+// Horas de 06:00 a 23:30, cada 30 minutos
+const HORAS = Array.from({ length: 36 }, (_, i) => {
+  const h = String(6 + Math.floor(i / 2)).padStart(2, '0');
+  return `${h}:${i % 2 ? '30' : '00'}`;
+});
+// Fecha de hoy en Lima (AAAA-MM-DD)
+const hoyLima = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+
 export default function Publicar() {
   const router = useRouter();
   const [tipo, setTipo] = useState('faltan_jugadores');
@@ -14,7 +22,7 @@ export default function Publicar() {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     setError('');
-    if (!f.get('fecha')) return setError('Elige la fecha y hora del partido.');
+    if (!f.get('fecha') || !f.get('hora')) return setError('Elige la fecha y la hora del partido.');
     const posiciones = f.getAll('posiciones');
     if (tipo === 'faltan_jugadores' && posiciones.length === 0) return setError('Marca al menos una posición que buscas.');
     setCargando(true);
@@ -24,7 +32,7 @@ export default function Publicar() {
       p_distrito: f.get('distrito'),
       p_cancha: f.get('cancha').trim(),
       p_direccion: f.get('direccion').trim(),
-      p_fecha_hora: `${f.get('fecha')}:00-05:00`, // hora de Lima
+      p_fecha_hora: `${f.get('fecha')}T${f.get('hora')}:00-05:00`, // hora de Lima
       p_costo: Number(f.get('costo') || 0),
       p_faltantes: Number(f.get('faltantes') || 0),
       p_conducta_minima: Number(f.get('conducta') || 0),
@@ -59,7 +67,12 @@ export default function Publicar() {
         </label>
         <label>Nombre de la cancha<input id="cancha" name="cancha" type="text" required maxLength={60} placeholder="Ej. Complejo Deportivo El Golazo" /></label>
         <label className="full">Dirección de la cancha<input id="direccion" name="direccion" type="text" required maxLength={100} placeholder="Ej. Av. Primavera 1234" /></label>
-        <label>Fecha y hora<input id="fecha" name="fecha" type="datetime-local" required /></label>
+        <label>Fecha<input id="fecha" name="fecha" type="date" required min={hoyLima()} /></label>
+        <label>Hora
+          <select id="hora" name="hora" defaultValue="20:00" required>
+            {HORAS.map((h) => <option key={h} value={h}>{h}</option>)}
+          </select>
+        </label>
         <label>Costo por jugador (S/)<input id="costo" name="costo" type="number" min="0" max="200" step="0.5" defaultValue="15" /></label>
         {tipo === 'faltan_jugadores' && (
           <>
