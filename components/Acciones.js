@@ -3,13 +3,17 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { crearClienteNavegador } from '@/lib/supabase/client';
-import { nombrePosicion, uno } from '@/lib/datos';
+import { POSICIONES, nombrePosicion, uno } from '@/lib/datos';
 
-export default function Acciones({ publicacion: p, enEquipo, esCapitan, miConducta, miSolicitud, pendientes = [] }) {
+export default function Acciones({ publicacion: p, miPosicion = null, enEquipo, esCapitan, miConducta, miSolicitud, pendientes = [] }) {
   const router = useRouter();
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [contactos, setContactos] = useState(null);
+  // Posiciones libres (sin repetir). null = cualquier posición (partidos antiguos)
+  const cualquiera = (p.libres ?? []).includes(null);
+  const opciones = cualquiera ? POSICIONES.map((x) => x.valor) : [...new Set(p.libres ?? [])];
+  const [posicion, setPosicion] = useState(opciones.includes(miPosicion) ? miPosicion : opciones[0] ?? '');
 
   async function llamar(funcion, args) {
     setCargando(true);
@@ -34,8 +38,15 @@ export default function Acciones({ publicacion: p, enEquipo, esCapitan, miConduc
       {/* Jugador que no está en el equipo */}
       {buscaJugadores && !enEquipo && miSolicitud === null && (
         <>
-          <button className="btn" disabled={cargando || bajaConducta || p.faltantes <= 0}
-            onClick={() => llamar('solicitar_unirse', { p_publicacion: p.id })}>
+          {p.faltantes > 0 && opciones.length > 0 && (
+            <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>Quiero jugar de
+              <select value={posicion} onChange={(e) => setPosicion(e.target.value)}>
+                {opciones.map((x) => <option key={x} value={x}>{nombrePosicion(x)}</option>)}
+              </select>
+            </label>
+          )}
+          <button className="btn" disabled={cargando || bajaConducta || p.faltantes <= 0 || !posicion}
+            onClick={() => llamar('solicitar_unirse', { p_publicacion: p.id, p_posicion: posicion })}>
             {p.faltantes <= 0 ? 'Equipo completo' : 'Solicitar unirme'}
           </button>
           {bajaConducta && <small className="err">Requiere conducta {p.conductaMinima.toFixed(1)} o más</small>}
@@ -66,7 +77,8 @@ export default function Acciones({ publicacion: p, enEquipo, esCapitan, miConduc
             <div key={s.id} style={{ display: 'grid', gap: 4, fontSize: 13 }}>
               <span>
                 <Link href={`/jugador/${s.jugador?.id}`}>{s.jugador?.alias ?? 'Jugador'}</Link>
-                {s.jugador && <> · {nombrePosicion(s.jugador.posicion)} · conducta <b className="score">{uno(s.jugador.conducta)}</b>
+                {s.posicion && <> · quiere jugar de <b>{nombrePosicion(s.posicion).toLowerCase()}</b></>}
+                {s.jugador && <> · conducta <b className="score">{uno(s.jugador.conducta)}</b>
                   {s.jugador.medalla != null && <> · medalla <b className="score">{uno(s.jugador.medalla)}</b></>}</>}
               </span>
               <div style={{ display: 'flex', gap: 6 }}>

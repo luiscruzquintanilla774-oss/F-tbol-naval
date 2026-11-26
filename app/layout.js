@@ -14,6 +14,7 @@ export default async function Layout({ children }) {
   const { data: esAdmin } = user ? await supabase.rpc('es_admin') : { data: false };
   const { data: pend } = user ? await supabase.rpc('mis_pendientes') : { data: null };
   const pendientes = pend?.[0] ?? { amigos: 0, equipos: 0 };
+  const { data: sinLeer } = user ? await supabase.rpc('contar_notificaciones') : { data: 0 };
   const Aviso = ({ n }) => (n > 0 ? <span className="badge">{n}</span> : null);
 
   return (
@@ -43,6 +44,12 @@ export default async function Layout({ children }) {
                   <Link href="/jugadores">Jugadores</Link>
                   <Link href="/amigos">Amigos<Aviso n={pendientes.amigos} /></Link>
                   <Link href="/equipos">Equipos<Aviso n={pendientes.equipos} /></Link>
+                  <Link href="/notificaciones" aria-label="Notificaciones" title="Notificaciones">
+                    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ verticalAlign: '-3px' }}>
+                      <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2zM10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                    </svg>
+                    <Aviso n={sinLeer ?? 0} />
+                  </Link>
                   <Link href="/perfil">Mi perfil</Link>
                   <Link href="/reglas">Reglas</Link>
                   {esAdmin && <Link href="/admin">Admin</Link>}

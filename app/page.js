@@ -33,7 +33,7 @@ export default async function Inicio({ searchParams }) {
     .select(`id, tipo, distrito, cancha, direccion, fecha_hora, costo_por_jugador, jugadores_faltantes, conducta_minima,
       equipo:equipos!publicaciones_equipo_id_fkey ( id, nombre, capitan_id, equipo_jugadores ( jugador_id ) ),
       rival:equipos!publicaciones_rival_equipo_id_fkey ( nombre ),
-      publicacion_posiciones ( posicion )`)
+      publicacion_cupos ( id, posicion, jugador_id )`)
     .gte('fecha_hora', new Date().toISOString())
     .order('fecha_hora');
   if (filtros?.distrito) consulta = consulta.eq('distrito', filtros.distrito);
@@ -43,7 +43,7 @@ export default async function Inicio({ searchParams }) {
   // Solicitudes visibles: las mías y las que recibe mi equipo (lo filtra Supabase)
   const pubIds = (publicaciones ?? []).map((p) => p.id);
   const { data: solicitudes } = pubIds.length
-    ? await supabase.from('solicitudes').select('id, publicacion_id, jugador_id, estado').in('publicacion_id', pubIds)
+    ? await supabase.from('solicitudes').select('id, publicacion_id, jugador_id, estado, posicion').in('publicacion_id', pubIds)
     : { data: [] };
 
   const ids = [...new Set((publicaciones ?? []).flatMap((p) => p.equipo.equipo_jugadores.map((j) => j.jugador_id))
@@ -93,11 +93,12 @@ export default async function Inicio({ searchParams }) {
           const deEsta = (solicitudes ?? []).filter((s) => s.publicacion_id === p.id);
           const miSolicitud = deEsta.find((s) => s.jugador_id === user.id)?.estado ?? null;
           const pendientes = p.equipo.capitan_id === user.id
-            ? deEsta.filter((s) => s.estado === 'pendiente').map((s) => ({ id: s.id, jugador: porId[s.jugador_id] ?? null }))
+            ? deEsta.filter((s) => s.estado === 'pendiente').map((s) => ({ id: s.id, posicion: s.posicion, jugador: porId[s.jugador_id] ?? null }))
             : [];
+          const libres = p.publicacion_cupos.filter((c) => !c.jugador_id);
           const promedio = integrantes.length ? integrantes.reduce((a, j) => a + Number(j.conducta), 0) / integrantes.length : 0;
           return (
-            <article className="card post" key={p.id}>
+            <article className="card post" key={p.id} id={`p-${p.id}`}>
               <div className={`kind ${p.tipo}`}>{p.tipo === 'reto' ? 'Reto' : `Faltan ${p.jugadores_faltantes}`}</div>
               <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
                 <h3>{p.equipo.nombre}</h3>
@@ -107,8 +108,8 @@ export default async function Inicio({ searchParams }) {
                   <span>S/ {Number(p.costo_por_jugador).toFixed(2)} por jugador</span>
                 </div>
                 <div className="chips">
-                  {p.publicacion_posiciones.map((x) => (
-                    <span className="chip need" key={x.posicion}>Busca {nombrePosicion(x.posicion).toLowerCase()}</span>
+                  {libres.map((c) => (
+                    <span className="chip need" key={c.id}>Falta {c.posicion ? nombrePosicion(c.posicion).toLowerCase() : 'cualquier posición'}</span>
                   ))}
                   {p.tipo === 'faltan_jugadores' && <span className="chip">Conducta mínima {uno(p.conducta_minima)}</span>}
                   <span className="chip">Conducta promedio <span className="score">{uno(promedio)}</span></span>
@@ -123,7 +124,8 @@ export default async function Inicio({ searchParams }) {
                 </div>
               </div>
               <Acciones
-                publicacion={{ id: p.id, tipo: p.tipo, faltantes: p.jugadores_faltantes, conductaMinima: Number(p.conducta_minima), rival: p.rival?.nombre ?? null, equipoId: p.equipo.id }}
+                publicacion={{ id: p.id, tipo: p.tipo, faltantes: p.jugadores_faltantes, conductaMinima: Number(p.conducta_minima), rival: p.rival?.nombre ?? null, equipoId: p.equipo.id, libres: libres.map((c) => c.posicion) }}
+                miPosicion={yo?.posicion ?? null}
                 enEquipo={enEquipo}
                 esCapitan={p.equipo.capitan_id === user.id}
                 miConducta={Number(yo?.conducta ?? 10)}
