@@ -143,3 +143,11 @@ where u.raw_user_meta_data->>'nombre_completo' is not null
 
 -- Avisar a Supabase que recargue la lista de funciones
 notify pgrst, 'reload schema';
+
+-- 11) Permisos de lectura para usuarios con sesión (las reglas RLS siguen filtrando qué ve cada uno).
+--     Los proyectos nuevos de Supabase no los dan automáticamente.
+grant usage on schema public to anon, authenticated;
+grant select on all tables in schema public to authenticated;
+grant execute on all functions in schema public to authenticated;
+grant execute on function public.telefono_disponible(text) to anon;
+notify pgrst, 'reload schema';
