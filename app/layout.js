@@ -41,7 +41,6 @@ export default async function Layout({ children }) {
               {user ? (
                 <>
                   <Link href="/publicar">Publicar</Link>
-                  <Link href="/jugadores">Jugadores</Link>
                   <Link href="/amigos">Amigos<Aviso n={pendientes.amigos} /></Link>
                   <Link href="/equipos">Equipos<Aviso n={pendientes.equipos} /></Link>
                   <Link href="/notificaciones" aria-label="Notificaciones" title="Notificaciones">

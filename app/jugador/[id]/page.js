@@ -30,7 +30,7 @@ export default async function Jugador({ params }) {
         <div><BotonAmistad jugadorId={id} estado={r?.estado ?? 'ninguna'} /></div>
       </Ficha>
       <Social resumen={r} comunes={comunes ?? []} equipos={(equipos ?? []).map((e) => e.equipo)} />
-      <Link href="/jugadores">← Buscar más jugadores</Link>
+      <Link href="/amigos">← Amigos y jugadores</Link>
     </>
   );
 }

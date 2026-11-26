@@ -97,7 +97,7 @@ export default async function Equipo({ params }) {
             <p style={{ margin: '4px 0 8px', color: 'var(--muted)' }}>Invitados esperando respuesta: {invitados.map((j) => j.alias).join(', ')}</p>
           )}
           {paraInvitar.length === 0 && (
-            <p style={{ margin: 0, color: 'var(--muted)' }}>No tienes más amigos para invitar. <Link href="/jugadores">Busca jugadores</Link> y agrégalos.</p>
+            <p style={{ margin: 0, color: 'var(--muted)' }}>No tienes más amigos para invitar. <Link href="/amigos">Busca jugadores</Link> y agrégalos.</p>
           )}
           {paraInvitar.map((j) => (
             <FilaJugador key={j.id} j={j}>
