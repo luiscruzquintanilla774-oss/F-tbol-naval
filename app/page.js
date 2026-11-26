@@ -69,6 +69,9 @@ export default async function Inicio({ searchParams }) {
       {!yo && (
         <p className="note">No encontramos tu perfil. Si acabas de registrarte, vuelve a ingresar en unos segundos.</p>
       )}
+      {yo && !yo.alias && (
+        <p className="note">Elige tu alias en <Link href="/perfil">Mi perfil</Link>. Es el nombre con el que te verán los demás jugadores.</p>
+      )}
       {error && <p className="err">No se pudieron cargar los partidos: {error.message}</p>}
 
       <div className="list">
@@ -102,7 +105,7 @@ export default async function Inicio({ searchParams }) {
                   {integrantes.map((j) => (
                     <Link className="pbtn" key={j.id} href={j.id === user.id ? '/perfil' : `/jugador/${j.id}`}>
                       <Avatar jugador={j} />
-                      {j.nombre_completo.split(' ')[0]}{j.id === p.equipo.capitan_id ? ' (C)' : ''}
+                      {j.alias ?? 'Sin alias'}{j.id === p.equipo.capitan_id ? ' (C)' : ''}
                     </Link>
                   ))}
                 </div>

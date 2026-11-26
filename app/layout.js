@@ -11,6 +11,7 @@ export const metadata = {
 export default async function Layout({ children }) {
   const supabase = await crearClienteServidor();
   const { data: { user } } = await supabase.auth.getUser();
+  const { data: esAdmin } = user ? await supabase.rpc('es_admin') : { data: false };
 
   return (
     <html lang="es">
@@ -38,6 +39,7 @@ export default async function Layout({ children }) {
                   <Link href="/publicar">Publicar</Link>
                   <Link href="/perfil">Mi perfil</Link>
                   <Link href="/reglas">Reglas</Link>
+                  {esAdmin && <Link href="/admin">Admin</Link>}
                   <BotonSalir />
                 </>
               ) : (

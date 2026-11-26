@@ -65,7 +65,7 @@ export default function Acciones({ publicacion: p, enEquipo, esCapitan, miConduc
       {contactos && (
         <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13 }}>
           {contactos.map((c) => (
-            <li key={c.telefono}>{c.nombre_completo} ({nombrePosicion(c.posicion)}): <b>{c.telefono}</b></li>
+            <li key={c.telefono}>{c.alias ?? 'Sin alias'} ({nombrePosicion(c.posicion)}): <b>{c.telefono}</b></li>
           ))}
         </ul>
       )}

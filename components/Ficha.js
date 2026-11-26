@@ -9,7 +9,7 @@ export default function Ficha({ jugador: j, faltas = [], extra = null, children 
       <div className="card profile">
         <Avatar jugador={j} grande />
         <div style={{ minWidth: 0, display: 'grid', gap: 6 }}>
-          <h1 style={{ fontSize: 34 }}>{j.nombre_completo}</h1>
+          <h1 style={{ fontSize: 34 }}>{j.alias ?? 'Sin alias'}</h1>
           <div className="meta"><span><b>{nombrePosicion(j.posicion)}</b></span><span>{j.distrito}</span>{extra}</div>
           {children}
         </div>
