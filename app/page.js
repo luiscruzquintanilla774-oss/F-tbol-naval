@@ -40,7 +40,14 @@ export default async function Inicio({ searchParams }) {
   if (filtros?.tipo) consulta = consulta.eq('tipo', filtros.tipo);
   const { data: publicaciones, error } = await consulta;
 
-  const ids = [...new Set((publicaciones ?? []).flatMap((p) => p.equipo.equipo_jugadores.map((j) => j.jugador_id)).concat(user.id))];
+  // Solicitudes visibles: las mías y las que recibe mi equipo (lo filtra Supabase)
+  const pubIds = (publicaciones ?? []).map((p) => p.id);
+  const { data: solicitudes } = pubIds.length
+    ? await supabase.from('solicitudes').select('id, publicacion_id, jugador_id, estado').in('publicacion_id', pubIds)
+    : { data: [] };
+
+  const ids = [...new Set((publicaciones ?? []).flatMap((p) => p.equipo.equipo_jugadores.map((j) => j.jugador_id))
+    .concat((solicitudes ?? []).map((s) => s.jugador_id)).concat(user.id))];
   const { data: jugadores } = await supabase.from('jugadores_publico').select('*').in('id', ids);
   const porId = Object.fromEntries((jugadores ?? []).map((j) => [j.id, j]));
   const yo = porId[user.id];
@@ -83,6 +90,11 @@ export default async function Inicio({ searchParams }) {
         {(publicaciones ?? []).map((p) => {
           const integrantes = p.equipo.equipo_jugadores.map((j) => porId[j.jugador_id]).filter(Boolean);
           const enEquipo = integrantes.some((j) => j.id === user.id);
+          const deEsta = (solicitudes ?? []).filter((s) => s.publicacion_id === p.id);
+          const miSolicitud = deEsta.find((s) => s.jugador_id === user.id)?.estado ?? null;
+          const pendientes = p.equipo.capitan_id === user.id
+            ? deEsta.filter((s) => s.estado === 'pendiente').map((s) => ({ id: s.id, jugador: porId[s.jugador_id] ?? null }))
+            : [];
           const promedio = integrantes.length ? integrantes.reduce((a, j) => a + Number(j.conducta), 0) / integrantes.length : 0;
           return (
             <article className="card post" key={p.id}>
@@ -115,6 +127,8 @@ export default async function Inicio({ searchParams }) {
                 enEquipo={enEquipo}
                 esCapitan={p.equipo.capitan_id === user.id}
                 miConducta={Number(yo?.conducta ?? 10)}
+                miSolicitud={miSolicitud}
+                pendientes={pendientes}
               />
             </article>
           );
