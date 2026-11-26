@@ -132,3 +132,14 @@ drop policy if exists "capitan indica posiciones" on publicacion_posiciones;
 -- El usuario solo puede cambiar su foto, posición y distrito (no sus victorias ni su conducta)
 revoke update on perfiles from anon, authenticated;
 grant update (foto_url, posicion, distrito) on perfiles to authenticated;
+
+-- 10) Crear el perfil de quienes se registraron antes de ejecutar este archivo
+insert into perfiles (id, nombre_completo, telefono, posicion, distrito)
+select u.id, u.raw_user_meta_data->>'nombre_completo', u.raw_user_meta_data->>'telefono',
+       (u.raw_user_meta_data->>'posicion')::posicion, u.raw_user_meta_data->>'distrito'
+from auth.users u
+where u.raw_user_meta_data->>'nombre_completo' is not null
+  and not exists (select 1 from perfiles p where p.id = u.id);
+
+-- Avisar a Supabase que recargue la lista de funciones
+notify pgrst, 'reload schema';
