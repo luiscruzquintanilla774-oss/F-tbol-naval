@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { crearClienteNavegador } from '@/lib/supabase/client';
 import { DISTRITOS, POSICIONES } from '@/lib/datos';
+import SelectorAlineacion from '@/components/SelectorAlineacion';
 
 // Horas de 06:00 a 23:30, cada 30 minutos
 const HORAS = Array.from({ length: 36 }, (_, i) => {
@@ -17,6 +18,7 @@ export default function Publicar() {
   const [tipo, setTipo] = useState('faltan_jugadores');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+  const [alineacion, setAlineacion] = useState({ equipoId: '', jugadores: [] });
 
   async function enviar(e) {
     e.preventDefault();
@@ -25,6 +27,26 @@ export default function Publicar() {
     if (!f.get('fecha') || !f.get('hora')) return setError('Elige la fecha y la hora del partido.');
     const posiciones = f.getAll('posiciones');
     if (tipo === 'faltan_jugadores' && posiciones.length === 0) return setError('Marca al menos una posición que buscas.');
+    const fechaHora = `${f.get('fecha')}T${f.get('hora')}:00-05:00`; // hora de Lima
+    if (tipo === 'reto') {
+      if (!alineacion.equipoId) return setError('Elige tu equipo.');
+      if (alineacion.jugadores.length !== 7) return setError('Elige exactamente 7 titulares.');
+      setCargando(true);
+      const { data, error } = await crearClienteNavegador().rpc('crear_reto', {
+        p_equipo_fijo: alineacion.equipoId,
+        p_distrito: f.get('distrito'),
+        p_cancha: f.get('cancha').trim(),
+        p_direccion: f.get('direccion').trim(),
+        p_fecha_hora: fechaHora,
+        p_costo: Number(f.get('costo') || 0),
+        p_jugadores: alineacion.jugadores,
+      });
+      setCargando(false);
+      if (error) return setError(error.message);
+      router.push(`/reto/${data}`);
+      router.refresh();
+      return;
+    }
     setCargando(true);
     const { error } = await crearClienteNavegador().rpc('crear_publicacion', {
       p_tipo: tipo,
@@ -32,7 +54,7 @@ export default function Publicar() {
       p_distrito: f.get('distrito'),
       p_cancha: f.get('cancha').trim(),
       p_direccion: f.get('direccion').trim(),
-      p_fecha_hora: `${f.get('fecha')}T${f.get('hora')}:00-05:00`, // hora de Lima
+      p_fecha_hora: fechaHora,
       p_costo: Number(f.get('costo') || 0),
       p_faltantes: Number(f.get('faltantes') || 0),
       p_conducta_minima: Number(f.get('conducta') || 0),
@@ -56,10 +78,15 @@ export default function Publicar() {
         <label>Tipo de publicación
           <select id="tipo" value={tipo} onChange={(e) => setTipo(e.target.value)}>
             <option value="faltan_jugadores">Me faltan jugadores</option>
-            <option value="reto">Mi equipo está completo: lanzar reto</option>
+            <option value="reto">Lanzar reto con mi equipo (7 jugadores)</option>
           </select>
         </label>
-        <label>Nombre del equipo<input id="equipo" name="equipo" type="text" required maxLength={40} /></label>
+        {tipo === 'faltan_jugadores' && (
+          <label>Nombre del equipo<input id="equipo" name="equipo" type="text" required maxLength={40} /></label>
+        )}
+        {tipo === 'reto' && (
+          <div className="full"><SelectorAlineacion onChange={setAlineacion} /></div>
+        )}
         <label>Distrito
           <select id="distrito" name="distrito" defaultValue="Miraflores">
             {DISTRITOS.map((d) => <option key={d}>{d}</option>)}

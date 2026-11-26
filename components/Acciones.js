@@ -9,8 +9,6 @@ export default function Acciones({ publicacion: p, enEquipo, esCapitan, miConduc
   const router = useRouter();
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
-  const [nombreEquipo, setNombreEquipo] = useState('');
-  const [verReto, setVerReto] = useState(false);
   const [contactos, setContactos] = useState(null);
 
   async function llamar(funcion, args) {
@@ -84,18 +82,8 @@ export default function Acciones({ publicacion: p, enEquipo, esCapitan, miConduc
 
       {/* Retos */}
       {p.tipo === 'reto' && p.rival && <span className="chip need">Reto aceptado por {p.rival}</span>}
-      {p.tipo === 'reto' && !p.rival && !enEquipo && !verReto && (
-        <button className="btn" onClick={() => setVerReto(true)}>Aceptar reto</button>
-      )}
-      {verReto && (
-        <>
-          <input type="text" placeholder="Nombre de tu equipo" maxLength={40} value={nombreEquipo}
-            onChange={(e) => setNombreEquipo(e.target.value)} aria-label="Nombre de tu equipo" />
-          <button className="btn" disabled={cargando}
-            onClick={() => llamar('aceptar_reto', { p_publicacion: p.id, p_equipo: nombreEquipo })}>
-            Confirmar reto
-          </button>
-        </>
+      {p.tipo === 'reto' && (
+        <Link className={p.rival ? 'btn ghost' : 'btn'} href={`/reto/${p.id}`}>{p.rival ? 'Ver alineaciones' : 'Ver alineación y aceptar'}</Link>
       )}
 
       {/* Integrantes: teléfonos */}

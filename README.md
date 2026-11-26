@@ -7,7 +7,7 @@ Hecha con **Next.js** + **Supabase** y publicada en **Vercel**.
 
 ## Puesta en marcha
 
-1. **Supabase > SQL Editor > New query**: pega y ejecuta, en orden, `supabase/01-esquema.sql`, `supabase/02-funciones.sql` , `supabase/03-alias-privacidad.sql` , `supabase/04-solicitudes.sql` y `supabase/05-amigos-equipos.sql`.
+1. **Supabase > SQL Editor > New query**: pega y ejecuta, en orden, `supabase/01-esquema.sql`, `supabase/02-funciones.sql` , `supabase/03-alias-privacidad.sql` , `supabase/04-solicitudes.sql` , `supabase/05-amigos-equipos.sql` y `supabase/06-retos-equipos.sql`.
 2. **Supabase > Authentication > Sign In / Providers**: Email activado y *Confirm email* activado.
 3. **Vercel > Add New > Project**: importa este repositorio y agrega estas variables (Environment Variables):
    - `NEXT_PUBLIC_SUPABASE_URL`: Project URL de Supabase
