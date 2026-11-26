@@ -5,7 +5,7 @@ import BotonSalir from '@/components/BotonSalir';
 
 export const metadata = {
   title: 'Fútbol Naval',
-  description: 'Encuentra partidos de fútbol 7 en Lima Metropolitana: únete a equipos o lanza retos.',
+  description: 'Retos de fútbol 7 entre equipos de Lima Metropolitana para medir su nivel.',
 };
 
 export default async function Layout({ children }) {
@@ -37,10 +37,10 @@ export default async function Layout({ children }) {
               Fútbol Naval
             </Link>
             <nav className="tabs" aria-label="Secciones">
-              <Link href="/">Partidos</Link>
+              <Link href="/">Retos</Link>
               {user ? (
                 <>
-                  <Link href="/publicar">Publicar</Link>
+                  <Link href="/publicar">Lanzar reto</Link>
                   <Link href="/amigos">Amigos<Aviso n={pendientes.amigos} /></Link>
                   <Link href="/equipos">Equipos<Aviso n={pendientes.equipos} /></Link>
                   <Link href="/notificaciones" aria-label="Notificaciones" title="Notificaciones">

@@ -3,6 +3,8 @@ import { notFound, redirect } from 'next/navigation';
 import { crearClienteServidor } from '@/lib/supabase/server';
 import BotonRpc from '@/components/BotonRpc';
 import FilaJugador from '@/components/FilaJugador';
+import LogoEquipo from '@/components/LogoEquipo';
+import CambiarLogo from '@/components/CambiarLogo';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +14,7 @@ export default async function Equipo({ params }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: equipo } = await supabase.from('equipos_fijos').select('id, nombre, capitan_id').eq('id', id).maybeSingle();
+  const { data: equipo } = await supabase.from('equipos_fijos').select('id, nombre, capitan_id, logo_url').eq('id', id).maybeSingle();
   if (!equipo) notFound();
   const { data: filas } = await supabase.from('equipo_fijo_miembros').select('jugador_id, estado').eq('equipo_id', id);
   const esCapitan = equipo.capitan_id === user.id;
@@ -38,9 +40,13 @@ export default async function Equipo({ params }) {
   return (
     <>
       <div className="pagehead">
-        <div>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <LogoEquipo equipo={equipo} tam={72} />
+          <div>
           <h1>{equipo.nombre}</h1>
           <p>Capitán: <Link href={`/jugador/${equipo.capitan_id}`}>{porId[equipo.capitan_id]?.alias ?? '—'}</Link> · {miembros.length} de 12 integrantes</p>
+          {esCapitan && <CambiarLogo equipoId={id} tieneLogo={!!equipo.logo_url} />}
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {!esCapitan && miEstado === 'miembro' && (
@@ -63,6 +69,9 @@ export default async function Equipo({ params }) {
           )}
         </div>
       </div>
+      {!equipo.logo_url && (
+        <p className="note">Este equipo aún no tiene logo. {esCapitan ? 'Súbelo' : 'El capitán debe subirlo'} para poder lanzar o aceptar retos.</p>
+      )}
       {!esCapitan && !miEstado && !esAmigoCapitan && (
         <p className="note">Para pedir unirte, primero tienes que ser amigo del capitán.</p>
       )}
@@ -83,6 +92,10 @@ export default async function Equipo({ params }) {
         <h2 style={{ fontSize: 22, marginBottom: 4 }}>Integrantes ({miembros.length})</h2>
         {miembros.map((j) => (
           <FilaJugador key={j.id} j={j} detalle={j.id === equipo.capitan_id ? 'Capitán' : null}>
+            {esCapitan && j.id !== user.id && (
+              <BotonRpc fn="ceder_capitania" args={{ p_equipo: id, p_jugador: j.id }} className="btn ghost"
+                confirmar={`¿Nombrar capitán a ${j.alias ?? 'este jugador'}? Dejarás de serlo.`}>Hacer capitán</BotonRpc>
+            )}
             {esCapitan && j.id !== user.id && (
               <BotonRpc fn="quitar_de_equipo" args={{ p_equipo: id, p_jugador: j.id }} className="btn ghost" confirmar="¿Quitarlo?">Quitar</BotonRpc>
             )}

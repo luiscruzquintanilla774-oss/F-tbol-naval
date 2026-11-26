@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { crearClienteServidor } from '@/lib/supabase/server';
 import { fechaLima } from '@/lib/datos';
 import Cancha from '@/components/Cancha';
+import LogoEquipo from '@/components/LogoEquipo';
 import AceptarReto from '@/components/AceptarReto';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,8 @@ export default async function Reto({ params }) {
 
   const { data: p } = await supabase.from('publicaciones')
     .select(`id, tipo, distrito, cancha, direccion, fecha_hora, costo_por_jugador, equipo_fijo_id, rival_fijo_id,
-      equipo:equipos!publicaciones_equipo_id_fkey ( nombre ), rival:equipos!publicaciones_rival_equipo_id_fkey ( nombre )`)
+      equipo:equipos!publicaciones_equipo_id_fkey ( nombre ), rival:equipos!publicaciones_rival_equipo_id_fkey ( nombre ),
+      fijo:equipos_fijos!publicaciones_equipo_fijo_id_fkey ( nombre, logo_url ), rivalFijo:equipos_fijos!publicaciones_rival_fijo_id_fkey ( nombre, logo_url )`)
     .eq('id', id).maybeSingle();
   if (!p || p.tipo !== 'reto') notFound();
 
@@ -38,6 +40,16 @@ export default async function Reto({ params }) {
         </div>
       </div>
 
+      {p.fijo && (
+        <div className="card versus">
+          <div className="lado"><LogoEquipo equipo={p.fijo} tam={80} /><b>{p.fijo.nombre}</b></div>
+          <span className="vs">VS</span>
+          <div className="lado">
+            {p.rivalFijo ? <><LogoEquipo equipo={p.rivalFijo} tam={80} /><b>{p.rivalFijo.nombre}</b></>
+              : <><span className="sin-rival" style={{ width: 80, height: 80 }}>?</span><span className="chip need">Busca rival</span></>}
+          </div>
+        </div>
+      )}
       {!p.equipo_fijo_id && (
         <p className="note">Este reto se creó antes de que existieran los equipos registrados, por eso no muestra alineación y no se puede aceptar.</p>
       )}
@@ -51,7 +63,7 @@ export default async function Reto({ params }) {
         <AceptarReto publicacionId={p.id} equipoRetador={p.equipo_fijo_id} />
       )}
       {p.rival && <p className="chip need" style={{ justifySelf: 'start' }}>Reto aceptado por {p.rival.nombre}</p>}
-      <Link href="/?tipo=reto">← Ver todos los retos</Link>
+      <Link href="/">← Ver todos los retos</Link>
     </>
   );
 }

@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { crearClienteServidor } from '@/lib/supabase/server';
-import { DISTRITOS, fechaLima, nombrePosicion, uno } from '@/lib/datos';
-import Avatar from '@/components/Avatar';
-import Acciones from '@/components/Acciones';
+import { DISTRITOS, fechaLima } from '@/lib/datos';
+import LogoEquipo from '@/components/LogoEquipo';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,11 +12,10 @@ export default async function Inicio({ searchParams }) {
   if (!user) {
     return (
       <section className="hero">
-        <h1>¿Te falta equipo para el fulbito?</h1>
+        <h1>¿Tu equipo es tan bueno como creen?</h1>
         <p>
-          En Fútbol Naval encuentras equipos de fútbol 7 a los que les faltan jugadores, o rivales para tu
-          equipo completo, en tu distrito de Lima. Cada jugador tiene una nota de conducta y una medalla para
-          que sepas con quién juegas.
+          En Fútbol Naval los equipos de fútbol 7 de Lima se retan para medir su nivel. Registra tu equipo con
+          su logo, arma tu alineación de 7 y acepta el reto de otro equipo en tu distrito.
         </p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Link className="btn" href="/registro">Crear mi cuenta</Link>
@@ -30,40 +28,30 @@ export default async function Inicio({ searchParams }) {
   const filtros = await searchParams;
   let consulta = supabase
     .from('publicaciones')
-    .select(`id, tipo, distrito, cancha, direccion, fecha_hora, costo_por_jugador, jugadores_faltantes, conducta_minima,
-      equipo:equipos!publicaciones_equipo_id_fkey ( id, nombre, capitan_id, equipo_jugadores ( jugador_id ) ),
-      rival:equipos!publicaciones_rival_equipo_id_fkey ( nombre ),
-      publicacion_cupos ( id, posicion, jugador_id )`)
+    .select(`id, distrito, cancha, direccion, fecha_hora, costo_por_jugador, equipo_fijo_id,
+      fijo:equipos_fijos!publicaciones_equipo_fijo_id_fkey ( id, nombre, logo_url ),
+      rival:equipos_fijos!publicaciones_rival_fijo_id_fkey ( id, nombre, logo_url )`)
+    .eq('tipo', 'reto')
+    .not('equipo_fijo_id', 'is', null)
     .gte('fecha_hora', new Date().toISOString())
     .order('fecha_hora');
   if (filtros?.distrito) consulta = consulta.eq('distrito', filtros.distrito);
-  if (filtros?.tipo) consulta = consulta.eq('tipo', filtros.tipo);
-  const { data: publicaciones, error } = await consulta;
+  if (filtros?.estado === 'abiertos') consulta = consulta.is('rival_fijo_id', null);
+  const { data: retos, error } = await consulta;
 
-  // Solicitudes visibles: las mías y las que recibe mi equipo (lo filtra Supabase)
-  const pubIds = (publicaciones ?? []).map((p) => p.id);
-  const { data: solicitudes } = pubIds.length
-    ? await supabase.from('solicitudes').select('id, publicacion_id, jugador_id, estado, posicion').in('publicacion_id', pubIds)
-    : { data: [] };
-
-  const ids = [...new Set((publicaciones ?? []).flatMap((p) => p.equipo.equipo_jugadores.map((j) => j.jugador_id))
-    .concat((solicitudes ?? []).map((s) => s.jugador_id)).concat(user.id))];
-  const { data: jugadores } = await supabase.from('jugadores_publico').select('*').in('id', ids);
-  const porId = Object.fromEntries((jugadores ?? []).map((j) => [j.id, j]));
-  const yo = porId[user.id];
+  const { data: yo } = await supabase.from('jugadores_publico').select('id, alias').eq('id', user.id).maybeSingle();
 
   return (
     <>
       <div className="pagehead">
         <div>
-          <h1>Partidos de fútbol 7</h1>
-          <p>Únete a un equipo incompleto o acepta el reto de un equipo completo.</p>
+          <h1>Retos de fútbol 7</h1>
+          <p>Equipos que buscan rival para medir su nivel. Acepta un reto con tu equipo de 7 o más.</p>
         </div>
         <form className="filters" method="get">
-          <select name="tipo" defaultValue={filtros?.tipo ?? ''} aria-label="Tipo">
-            <option value="">Todos</option>
-            <option value="faltan_jugadores">Faltan jugadores</option>
-            <option value="reto">Retos</option>
+          <select name="estado" defaultValue={filtros?.estado ?? ''} aria-label="Estado">
+            <option value="">Todos los retos</option>
+            <option value="abiertos">Buscan rival</option>
           </select>
           <select name="distrito" defaultValue={filtros?.distrito ?? ''} aria-label="Distrito">
             <option value="">Todos los distritos</option>
@@ -79,62 +67,31 @@ export default async function Inicio({ searchParams }) {
       {yo && !yo.alias && (
         <p className="note">Elige tu alias en <Link href="/perfil">Mi perfil</Link>. Es el nombre con el que te verán los demás jugadores.</p>
       )}
-      {error && <p className="err">No se pudieron cargar los partidos: {error.message}</p>}
+      {error && <p className="err">No se pudieron cargar los retos: {error.message}</p>}
 
       <div className="list">
-        {(publicaciones ?? []).length === 0 && (
+        {(retos ?? []).length === 0 && (
           <div className="card empty">
-            No hay partidos próximos con esos filtros. <Link href="/publicar">Publica el primero</Link>.
+            No hay retos próximos con esos filtros. <Link href="/publicar">Lanza el primero</Link>.
           </div>
         )}
-        {(publicaciones ?? []).map((p) => {
-          const integrantes = p.equipo.equipo_jugadores.map((j) => porId[j.jugador_id]).filter(Boolean);
-          const enEquipo = integrantes.some((j) => j.id === user.id);
-          const deEsta = (solicitudes ?? []).filter((s) => s.publicacion_id === p.id);
-          const miSolicitud = deEsta.find((s) => s.jugador_id === user.id)?.estado ?? null;
-          const pendientes = p.equipo.capitan_id === user.id
-            ? deEsta.filter((s) => s.estado === 'pendiente').map((s) => ({ id: s.id, posicion: s.posicion, jugador: porId[s.jugador_id] ?? null }))
-            : [];
-          const libres = p.publicacion_cupos.filter((c) => !c.jugador_id);
-          const promedio = integrantes.length ? integrantes.reduce((a, j) => a + Number(j.conducta), 0) / integrantes.length : 0;
-          return (
-            <article className="card post" key={p.id} id={`p-${p.id}`}>
-              <div className={`kind ${p.tipo}`}>{p.tipo === 'reto' ? 'Reto' : `Faltan ${p.jugadores_faltantes}`}</div>
-              <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
-                <h3>{p.equipo.nombre}</h3>
-                <div className="meta">
-                  <span><b>{fechaLima(p.fecha_hora)}</b></span>
-                  <span><b>{p.distrito}</b> · {p.cancha}, {p.direccion}</span>
-                  <span>S/ {Number(p.costo_por_jugador).toFixed(2)} por jugador</span>
-                </div>
-                <div className="chips">
-                  {libres.map((c) => (
-                    <span className="chip need" key={c.id}>Falta {c.posicion ? nombrePosicion(c.posicion).toLowerCase() : 'cualquier posición'}</span>
-                  ))}
-                  {p.tipo === 'faltan_jugadores' && <span className="chip">Conducta mínima {uno(p.conducta_minima)}</span>}
-                  <span className="chip">Conducta promedio <span className="score">{uno(promedio)}</span></span>
-                </div>
-                <div className="roster">
-                  {integrantes.map((j) => (
-                    <Link className="pbtn" key={j.id} href={j.id === user.id ? '/perfil' : `/jugador/${j.id}`}>
-                      <Avatar jugador={j} />
-                      {j.alias ?? 'Sin alias'}{j.id === p.equipo.capitan_id ? ' (C)' : ''}
-                    </Link>
-                  ))}
-                </div>
+        {(retos ?? []).map((r) => (
+          <Link key={r.id} id={`p-${r.id}`} href={`/reto/${r.id}`} className="card reto" style={{ color: 'var(--ink)', textDecoration: 'none' }}>
+            <div className="versus">
+              <div className="lado"><LogoEquipo equipo={r.fijo} tam={56} /><b>{r.fijo?.nombre}</b></div>
+              <span className="vs">VS</span>
+              <div className="lado">
+                {r.rival ? <><LogoEquipo equipo={r.rival} tam={56} /><b>{r.rival.nombre}</b></>
+                  : <><span className="sin-rival">?</span><span className="chip need">Busca rival</span></>}
               </div>
-              <Acciones
-                publicacion={{ id: p.id, tipo: p.tipo, faltantes: p.jugadores_faltantes, conductaMinima: Number(p.conducta_minima), rival: p.rival?.nombre ?? null, equipoId: p.equipo.id, libres: libres.map((c) => c.posicion) }}
-                miPosicion={yo?.posicion ?? null}
-                enEquipo={enEquipo}
-                esCapitan={p.equipo.capitan_id === user.id}
-                miConducta={Number(yo?.conducta ?? 10)}
-                miSolicitud={miSolicitud}
-                pendientes={pendientes}
-              />
-            </article>
-          );
-        })}
+            </div>
+            <div className="meta">
+              <span><b>{fechaLima(r.fecha_hora)}</b></span>
+              <span><b>{r.distrito}</b> · {r.cancha}, {r.direccion}</span>
+              <span>S/ {Number(r.costo_por_jugador).toFixed(2)} por jugador</span>
+            </div>
+          </Link>
+        ))}
       </div>
     </>
   );

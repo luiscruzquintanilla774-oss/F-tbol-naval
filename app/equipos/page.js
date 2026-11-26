@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { crearClienteServidor } from '@/lib/supabase/server';
 import BotonRpc from '@/components/BotonRpc';
 import CrearEquipo from '@/components/CrearEquipo';
+import LogoEquipo from '@/components/LogoEquipo';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ export default async function Equipos() {
 
   const { data: mias, error } = await supabase
     .from('equipo_fijo_miembros')
-    .select('estado, equipo:equipos_fijos ( id, nombre, capitan_id, equipo_fijo_miembros ( estado ) )')
+    .select('estado, equipo:equipos_fijos ( id, nombre, capitan_id, logo_url, equipo_fijo_miembros ( estado ) )')
     .eq('jugador_id', user.id);
   const lista = mias ?? [];
   const miembro = lista.filter((m) => m.estado === 'miembro');
@@ -26,7 +27,7 @@ export default async function Equipos() {
       <div className="pagehead">
         <div>
           <h1>Mis equipos</h1>
-          <p>Arma tu equipo con tus amigos para jugar siempre juntos.</p>
+          <p>Arma tu equipo con tus amigos para retar a otros equipos y medir su nivel.</p>
         </div>
       </div>
       {error && <p className="err">{error.message}</p>}
@@ -47,9 +48,12 @@ export default async function Equipos() {
       <div className="list">
         {miembro.length === 0 && <div className="card empty">Aún no perteneces a ningún equipo. Crea uno o pide unirte al de un amigo desde su perfil.</div>}
         {miembro.map(({ equipo: e }) => (
-          <Link key={e.id} href={`/equipos/${e.id}`} className="card" style={{ color: 'var(--ink)', textDecoration: 'none' }}>
+          <Link key={e.id} href={`/equipos/${e.id}`} className="card" style={{ color: 'var(--ink)', textDecoration: 'none', display: 'flex', gap: 12, alignItems: 'center' }}>
+            <LogoEquipo equipo={e} />
+            <div style={{ display: 'grid', gap: 4 }}>
             <h3 style={{ fontSize: 22 }}>{e.nombre}</h3>
-            <span className="meta"><span>{cuenta(e)} integrantes</span>{e.capitan_id === user.id && <span><b>Eres el capitán</b></span>}</span>
+            <span className="meta"><span>{cuenta(e)} integrantes</span>{e.capitan_id === user.id && <span><b>Eres el capitán</b></span>}{!e.logo_url && <span className="err">Sin logo</span>}</span>
+            </div>
           </Link>
         ))}
       </div>

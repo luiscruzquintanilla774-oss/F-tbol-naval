@@ -103,3 +103,9 @@ form.grid .full{grid-column:1/-1}
 .notif{display:flex;justify-content:space-between;gap:12px;align-items:baseline;text-decoration:none;color:var(--ink)}
 .notif small{color:var(--muted);white-space:nowrap}
 .notif[data-nueva]{border-left:4px solid var(--flag);font-weight:600}
+.reto{display:grid;gap:12px}
+.versus{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;text-align:center}
+.versus .lado{display:grid;justify-items:center;gap:6px;min-width:0}
+.versus .lado b{font-family:'Barlow Condensed',sans-serif;font-size:20px;overflow-wrap:anywhere}
+.versus .vs{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:26px;color:var(--flag-ink)}
+.sin-rival{width:56px;height:56px;border-radius:50%;border:2px dashed var(--line);display:grid;place-items:center;font-size:24px;color:var(--muted)}
