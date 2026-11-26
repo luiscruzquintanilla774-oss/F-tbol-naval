@@ -12,6 +12,9 @@ export default async function Layout({ children }) {
   const supabase = await crearClienteServidor();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: esAdmin } = user ? await supabase.rpc('es_admin') : { data: false };
+  const { data: pend } = user ? await supabase.rpc('mis_pendientes') : { data: null };
+  const pendientes = pend?.[0] ?? { amigos: 0, equipos: 0 };
+  const Aviso = ({ n }) => (n > 0 ? <span className="badge">{n}</span> : null);
 
   return (
     <html lang="es">
@@ -37,6 +40,9 @@ export default async function Layout({ children }) {
               {user ? (
                 <>
                   <Link href="/publicar">Publicar</Link>
+                  <Link href="/jugadores">Jugadores</Link>
+                  <Link href="/amigos">Amigos<Aviso n={pendientes.amigos} /></Link>
+                  <Link href="/equipos">Equipos<Aviso n={pendientes.equipos} /></Link>
                   <Link href="/perfil">Mi perfil</Link>
                   <Link href="/reglas">Reglas</Link>
                   {esAdmin && <Link href="/admin">Admin</Link>}
