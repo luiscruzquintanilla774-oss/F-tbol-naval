@@ -47,6 +47,7 @@ export default function Registro() {
     });
     setCargando(false);
     if (error) {
+      if (/rate limit/i.test(error.message)) return setError('Hay muchos registros en este momento y no pudimos enviar el correo de confirmación. Inténtalo de nuevo en una hora.');
       if (/already registered/i.test(error.message)) return setError('Este correo ya tiene una cuenta. Ingresa con él o usa otro correo.');
       if (/database error/i.test(error.message)) return setError('No se pudo crear la cuenta. Revisa que el alias y el teléfono no estén registrados.');
       return setError(error.message);
